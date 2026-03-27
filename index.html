@@ -3,361 +3,606 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>説明記録 シンプル版</title>
+  <title>説明記録アプリ</title>
   <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #dbe2ea;
+      --accent: #2563eb;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
-      background: #f5f5f7;
-      color: #111;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
     .wrap {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0 auto;
       padding: 16px;
+      padding-bottom: 40px;
     }
     h1 {
       font-size: 24px;
-      margin: 0 0 16px;
+      margin: 8px 0 16px;
     }
-    .card {
-      background: #fff;
-      border-radius: 14px;
-      padding: 16px;
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
       margin-bottom: 14px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
-    h2 {
+    .tab-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .card h2 {
       font-size: 18px;
       margin: 0 0 12px;
+    }
+    .sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.5;
     }
     label {
       display: block;
       font-size: 14px;
-      margin: 10px 0 6px;
       font-weight: 600;
+      margin: 10px 0 6px;
     }
-    input, select, button {
+    input, select, textarea {
       width: 100%;
-      box-sizing: border-box;
-      font-size: 16px;
-      border-radius: 10px;
-    }
-    input, select {
+      border: 1px solid var(--line);
+      border-radius: 12px;
       padding: 12px;
-      border: 1px solid #cfcfd4;
+      font-size: 16px;
       background: #fff;
     }
+    textarea { min-height: 84px; resize: vertical; }
     button {
-      padding: 12px;
-      border: 0;
-      background: #111;
-      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 15px;
       font-weight: 700;
-      margin-top: 12px;
+      cursor: pointer;
     }
-    button.sub {
-      background: #666;
-    }
-    button.light {
-      background: #2d6cdf;
-    }
-    .row {
+    .primary { background: var(--accent); color: #fff; }
+    .secondary { background: #e5eefc; color: #1d4ed8; }
+    .danger { background: #fee2e2; color: var(--danger); }
+    .muted-btn { background: #eef2f7; color: #334155; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .row > * { flex: 1 1 140px; }
+    .list {
       display: flex;
+      flex-direction: column;
       gap: 10px;
-      flex-wrap: wrap;
+      margin-top: 10px;
     }
-    .row > * {
-      flex: 1 1 200px;
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
     }
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 12px 0 0;
+    .item-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      word-break: break-word;
     }
-    li {
-      padding: 12px 0;
-      border-top: 1px solid #ececf1;
-    }
-    .small {
-      color: #666;
+    .meta {
       font-size: 13px;
+      color: var(--muted);
       line-height: 1.5;
+      word-break: break-word;
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
     }
     .empty {
-      color: #666;
+      color: var(--muted);
       font-size: 14px;
-      padding-top: 6px;
+      padding: 8px 2px;
     }
+    .success, .error {
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .success { background: #ecfdf5; color: #065f46; }
+    .error { background: #fef2f2; color: #991b1b; }
     .pill {
       display: inline-block;
       font-size: 12px;
-      background: #efeff4;
-      border-radius: 999px;
       padding: 4px 8px;
-      margin-bottom: 6px;
-    }
-    .rowbtn {
-      margin-top: 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      margin-bottom: 8px;
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>説明記録 シンプル版</h1>
+    <h1>説明記録アプリ</h1>
 
-    <div class="card">
-      <h2>1. 名前登録</h2>
-      <label for="nameInput">名前</label>
-      <input id="nameInput" type="text" placeholder="例: 田中" />
-      <button id="addNameBtn" type="button">名前を追加</button>
-      <ul id="nameList"></ul>
-      <div id="nameEmpty" class="empty">まだ名前がありません</div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="record">記録</button>
+      <button class="tab-btn" data-tab="names">名前管理</button>
+      <button class="tab-btn" data-tab="data">データ管理</button>
     </div>
 
-    <div class="card">
-      <h2>2. 記録</h2>
-      <label for="toSelect">誰に説明したか</label>
-      <select id="toSelect"></select>
-      <button id="saveLogBtn" type="button">この相手で記録</button>
-      <div class="small" style="margin-top:8px;">押した時の日時で保存します。記録は「誰に / いつ」だけ残します。</div>
-    </div>
+    <section class="panel active" id="panel-record">
+      <div class="card">
+        <h2>説明を記録</h2>
+        <div class="sub">「誰に説明したか」と「いつ」を記録します。説明者は不要です。</div>
 
-    <div class="card">
-      <h2>3. 履歴</h2>
-      <div class="row">
-        <button id="exportJsonBtn" type="button" class="light">JSONを書き出し</button>
-        <button id="exportCsvBtn" type="button" class="light">CSVを書き出し</button>
+        <label for="recipientSelect">相手</label>
+        <select id="recipientSelect"></select>
+
+        <label for="noteInput">メモ（任意）</label>
+        <textarea id="noteInput" placeholder="必要なら内容を入力"></textarea>
+
+        <div class="toolbar">
+          <button class="primary" id="saveRecordBtn">この相手で記録</button>
+        </div>
+        <div id="recordMessage"></div>
       </div>
-      <button id="clearBtn" type="button" class="sub">履歴を全部消す</button>
-      <ul id="logList"></ul>
-      <div id="logEmpty" class="empty">まだ履歴がありません</div>
-    </div>
+
+      <div class="card">
+        <h2>履歴</h2>
+        <div class="row">
+          <div>
+            <label for="historyFilter">表示</label>
+            <select id="historyFilter">
+              <option value="today">今日のみ</option>
+              <option value="all">すべて</option>
+            </select>
+          </div>
+        </div>
+        <div class="list" id="recordList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-names">
+      <div class="card">
+        <h2>名前を追加</h2>
+        <label for="nameInput">名前</label>
+        <input id="nameInput" type="text" placeholder="例: 田中" />
+        <div class="toolbar">
+          <button class="primary" id="addNameBtn">追加</button>
+        </div>
+        <div id="nameMessage"></div>
+      </div>
+
+      <div class="card">
+        <h2>登録済みの名前</h2>
+        <div class="list" id="nameList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-data">
+      <div class="card">
+        <h2>JSONエクスポート</h2>
+        <div class="sub">名前と履歴を1つのJSONファイルとして保存します。バックアップ向けです。</div>
+        <div class="toolbar">
+          <button class="secondary" id="exportJsonBtn">JSONを書き出す</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>JSONインポート</h2>
+        <div class="sub">このアプリから書き出したJSONを読み込みます。今のデータは上書きされます。</div>
+        <label for="importFile">JSONファイル</label>
+        <input id="importFile" type="file" accept=".json,application/json" />
+        <div class="toolbar">
+          <button class="primary" id="importJsonBtn">JSONを読み込む</button>
+        </div>
+        <div id="dataMessage"></div>
+      </div>
+
+      <div class="card">
+        <h2>全データ削除</h2>
+        <div class="sub">名前と履歴をすべて削除します。</div>
+        <div class="toolbar">
+          <button class="danger" id="clearAllBtn">全データ削除</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script>
-    var STORAGE_NAMES = 'simple_names_v2';
-    var STORAGE_LOGS = 'simple_logs_v2';
+    const STORAGE_KEY = 'explain_log_json_only_v2';
 
-    var nameInput = document.getElementById('nameInput');
-    var addNameBtn = document.getElementById('addNameBtn');
-    var nameList = document.getElementById('nameList');
-    var nameEmpty = document.getElementById('nameEmpty');
-    var toSelect = document.getElementById('toSelect');
-    var saveLogBtn = document.getElementById('saveLogBtn');
-    var logList = document.getElementById('logList');
-    var logEmpty = document.getElementById('logEmpty');
-    var clearBtn = document.getElementById('clearBtn');
-    var exportJsonBtn = document.getElementById('exportJsonBtn');
-    var exportCsvBtn = document.getElementById('exportCsvBtn');
+    const state = loadState();
 
-    function loadNames() {
+    const recipientSelect = document.getElementById('recipientSelect');
+    const noteInput = document.getElementById('noteInput');
+    const saveRecordBtn = document.getElementById('saveRecordBtn');
+    const recordList = document.getElementById('recordList');
+    const historyFilter = document.getElementById('historyFilter');
+    const recordMessage = document.getElementById('recordMessage');
+
+    const nameInput = document.getElementById('nameInput');
+    const addNameBtn = document.getElementById('addNameBtn');
+    const nameList = document.getElementById('nameList');
+    const nameMessage = document.getElementById('nameMessage');
+
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
+    const importJsonBtn = document.getElementById('importJsonBtn');
+    const importFile = document.getElementById('importFile');
+    const dataMessage = document.getElementById('dataMessage');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    addNameBtn.addEventListener('click', addName);
+    saveRecordBtn.addEventListener('click', saveRecord);
+    historyFilter.addEventListener('change', renderRecords);
+    exportJsonBtn.addEventListener('click', exportJson);
+    importJsonBtn.addEventListener('click', importJson);
+    clearAllBtn.addEventListener('click', clearAllData);
+
+    function loadState() {
       try {
-        return JSON.parse(localStorage.getItem(STORAGE_NAMES) || '[]');
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { names: [], records: [] };
+        const parsed = JSON.parse(raw);
+        return {
+          names: Array.isArray(parsed.names) ? parsed.names : [],
+          records: Array.isArray(parsed.records) ? parsed.records : []
+        };
       } catch (e) {
-        return [];
+        return { names: [], records: [] };
       }
     }
 
-    function saveNames(names) {
-      localStorage.setItem(STORAGE_NAMES, JSON.stringify(names));
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
-    function loadLogs() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_LOGS) || '[]');
-      } catch (e) {
-        return [];
+    function showMessage(el, text, type) {
+      el.innerHTML = '';
+      if (!text) return;
+      const div = document.createElement('div');
+      div.className = type === 'error' ? 'error' : 'success';
+      div.textContent = text;
+      el.appendChild(div);
+    }
+
+    function makeId() {
+      return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    }
+
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    function formatDateTime(iso) {
+      const d = new Date(iso);
+      return d.toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    function todayKey(iso) {
+      const d = iso ? new Date(iso) : new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function addName() {
+      const name = nameInput.value.trim();
+      if (!name) {
+        showMessage(nameMessage, '名前を入力してください。', 'error');
+        return;
       }
+      const exists = state.names.some(n => n.name === name);
+      if (exists) {
+        showMessage(nameMessage, '同じ名前がすでにあります。', 'error');
+        return;
+      }
+      state.names.push({ id: makeId(), name });
+      saveState();
+      nameInput.value = '';
+      showMessage(nameMessage, '名前を追加しました。', 'success');
+      renderAll();
     }
 
-    function saveLogs(logs) {
-      localStorage.setItem(STORAGE_LOGS, JSON.stringify(logs));
+    function editName(id) {
+      const target = state.names.find(n => n.id === id);
+      if (!target) return;
+      const next = prompt('名前を編集', target.name);
+      if (next === null) return;
+      const trimmed = next.trim();
+      if (!trimmed) {
+        alert('名前を入力してください。');
+        return;
+      }
+      const exists = state.names.some(n => n.id !== id && n.name === trimmed);
+      if (exists) {
+        alert('同じ名前がすでにあります。');
+        return;
+      }
+      target.name = trimmed;
+      saveState();
+      renderAll();
     }
 
-    function formatDate(iso) {
-      var d = new Date(iso);
-      if (isNaN(d.getTime())) return iso;
-      var y = d.getFullYear();
-      var m = String(d.getMonth() + 1).padStart(2, '0');
-      var day = String(d.getDate()).padStart(2, '0');
-      var h = String(d.getHours()).padStart(2, '0');
-      var min = String(d.getMinutes()).padStart(2, '0');
-      return y + '/' + m + '/' + day + ' ' + h + ':' + min;
+    function deleteName(id) {
+      const target = state.names.find(n => n.id === id);
+      if (!target) return;
+      const ok = confirm(`「${target.name}」を削除しますか？\n関連する履歴も削除されます。`);
+      if (!ok) return;
+      state.names = state.names.filter(n => n.id !== id);
+      state.records = state.records.filter(r => r.toId !== id);
+      saveState();
+      renderAll();
     }
 
-    function escapeCsv(value) {
-      var text = String(value == null ? '' : value);
-      return '"' + text.replace(/"/g, '""') + '"';
+    function saveRecord() {
+      if (!state.names.length) {
+        showMessage(recordMessage, '先に名前を登録してください。', 'error');
+        return;
+      }
+      const toId = recipientSelect.value;
+      const target = state.names.find(n => n.id === toId);
+      if (!target) {
+        showMessage(recordMessage, '相手を選んでください。', 'error');
+        return;
+      }
+      const note = noteInput.value.trim();
+      state.records.unshift({
+        id: makeId(),
+        toId,
+        toName: target.name,
+        note,
+        createdAt: nowIso()
+      });
+      saveState();
+      noteInput.value = '';
+      showMessage(recordMessage, `「${target.name}」への記録を保存しました。`, 'success');
+      renderRecords();
     }
 
-    function downloadText(filename, content, type) {
-      var blob = new Blob([content], { type: type });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
+    function deleteRecord(id) {
+      const ok = confirm('この履歴を削除しますか？');
+      if (!ok) return;
+      state.records = state.records.filter(r => r.id !== id);
+      saveState();
+      renderRecords();
+    }
+
+    function exportJson() {
+      const payload = {
+        app: '説明記録アプリ',
+        version: 2,
+        exportedAt: nowIso(),
+        data: state
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `explain-log-backup-${todayKey()}.json`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      setTimeout(function() {
-        URL.revokeObjectURL(url);
-      }, 1000);
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function importJson() {
+      const file = importFile.files && importFile.files[0];
+      if (!file) {
+        showMessage(dataMessage, 'JSONファイルを選んでください。', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function() {
+        try {
+          const parsed = JSON.parse(reader.result);
+          const data = parsed && parsed.data ? parsed.data : parsed;
+
+          if (!data || !Array.isArray(data.names) || !Array.isArray(data.records)) {
+            throw new Error('invalid');
+          }
+
+          state.names = data.names.map(n => ({
+            id: String(n.id || makeId()),
+            name: String(n.name || '').trim()
+          })).filter(n => n.name);
+
+          state.records = data.records.map(r => ({
+            id: String(r.id || makeId()),
+            toId: String(r.toId || ''),
+            toName: String(r.toName || ''),
+            note: String(r.note || ''),
+            createdAt: String(r.createdAt || nowIso())
+          })).filter(r => r.toName && r.createdAt);
+
+          saveState();
+          importFile.value = '';
+          showMessage(dataMessage, 'JSONを読み込みました。', 'success');
+          renderAll();
+        } catch (e) {
+          showMessage(dataMessage, '読み込みできませんでした。このアプリのJSONか確認してください。', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function clearAllData() {
+      const ok = confirm('名前と履歴をすべて削除しますか？');
+      if (!ok) return;
+      state.names = [];
+      state.records = [];
+      saveState();
+      showMessage(dataMessage, '全データを削除しました。', 'success');
+      renderAll();
+    }
+
+    function renderRecipientSelect() {
+      recipientSelect.innerHTML = '';
+      if (!state.names.length) {
+        const op = document.createElement('option');
+        op.value = '';
+        op.textContent = '先に名前を登録してください';
+        recipientSelect.appendChild(op);
+        recipientSelect.disabled = true;
+        saveRecordBtn.disabled = true;
+        return;
+      }
+      recipientSelect.disabled = false;
+      saveRecordBtn.disabled = false;
+      state.names.forEach(n => {
+        const op = document.createElement('option');
+        op.value = n.id;
+        op.textContent = n.name;
+        recipientSelect.appendChild(op);
+      });
     }
 
     function renderNames() {
-      var names = loadNames();
       nameList.innerHTML = '';
-      toSelect.innerHTML = '';
-
-      if (names.length === 0) {
-        nameEmpty.style.display = 'block';
-        var opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = '先に名前を追加してください';
-        toSelect.appendChild(opt);
+      if (!state.names.length) {
+        nameList.innerHTML = '<div class="empty">まだ名前がありません。</div>';
         return;
       }
+      state.names.forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'item';
 
-      nameEmpty.style.display = 'none';
-      for (var i = 0; i < names.length; i++) {
-        (function(index) {
-          var li = document.createElement('li');
-          var text = document.createElement('div');
-          text.textContent = names[index];
-          li.appendChild(text);
+        const title = document.createElement('div');
+        title.className = 'item-title';
+        title.textContent = n.name;
 
-          var del = document.createElement('button');
-          del.type = 'button';
-          del.textContent = '削除';
-          del.className = 'sub rowbtn';
-          del.onclick = function() {
-            var current = loadNames();
-            var deletedName = current[index];
-            current.splice(index, 1);
-            saveNames(current);
+        const tools = document.createElement('div');
+        tools.className = 'toolbar';
 
-            var logs = loadLogs().filter(function(item) {
-              return item.to !== deletedName;
-            });
-            saveLogs(logs);
+        const editBtn = document.createElement('button');
+        editBtn.className = 'muted-btn';
+        editBtn.textContent = '編集';
+        editBtn.addEventListener('click', () => editName(n.id));
 
-            renderNames();
-            renderLogs();
-          };
-          li.appendChild(del);
-          nameList.appendChild(li);
-        })(i);
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '削除';
+        delBtn.addEventListener('click', () => deleteName(n.id));
 
-        var option = document.createElement('option');
-        option.value = names[i];
-        option.textContent = names[i];
-        toSelect.appendChild(option);
-      }
-    }
+        tools.appendChild(editBtn);
+        tools.appendChild(delBtn);
 
-    function renderLogs() {
-      var logs = loadLogs();
-      logList.innerHTML = '';
-
-      if (logs.length === 0) {
-        logEmpty.style.display = 'block';
-        return;
-      }
-      logEmpty.style.display = 'none';
-
-      for (var i = logs.length - 1; i >= 0; i--) {
-        (function(index) {
-          var log = logs[index];
-          var li = document.createElement('li');
-
-          var tag = document.createElement('div');
-          tag.className = 'pill';
-          tag.textContent = '説明記録';
-          li.appendChild(tag);
-
-          var text = document.createElement('div');
-          text.textContent = log.to + ' / ' + formatDate(log.at);
-          li.appendChild(text);
-
-          var del = document.createElement('button');
-          del.type = 'button';
-          del.textContent = 'この履歴を削除';
-          del.className = 'sub rowbtn';
-          del.onclick = function() {
-            var current = loadLogs();
-            current.splice(index, 1);
-            saveLogs(current);
-            renderLogs();
-          };
-          li.appendChild(del);
-          logList.appendChild(li);
-        })(i);
-      }
-    }
-
-    addNameBtn.onclick = function() {
-      var value = nameInput.value.trim();
-      if (!value) {
-        alert('名前を入力してください');
-        return;
-      }
-      var names = loadNames();
-      if (names.indexOf(value) !== -1) {
-        alert('同じ名前は登録済みです');
-        return;
-      }
-      names.push(value);
-      saveNames(names);
-      nameInput.value = '';
-      renderNames();
-    };
-
-    saveLogBtn.onclick = function() {
-      var to = toSelect.value;
-      if (!to) {
-        alert('説明相手を選んでください');
-        return;
-      }
-
-      var logs = loadLogs();
-      logs.push({
-        to: to,
-        at: new Date().toISOString()
+        item.appendChild(title);
+        item.appendChild(tools);
+        nameList.appendChild(item);
       });
-      saveLogs(logs);
-      renderLogs();
-      alert('記録しました');
-    };
+    }
 
-    clearBtn.onclick = function() {
-      if (!confirm('履歴を全部消しますか？')) return;
-      saveLogs([]);
-      renderLogs();
-    };
-
-    exportJsonBtn.onclick = function() {
-      var data = {
-        exportedAt: new Date().toISOString(),
-        names: loadNames(),
-        logs: loadLogs()
-      };
-      var filename = 'explain_log_export_' + new Date().toISOString().slice(0, 10) + '.json';
-      downloadText(filename, JSON.stringify(data, null, 2), 'application/json;charset=utf-8');
-    };
-
-    exportCsvBtn.onclick = function() {
-      var logs = loadLogs();
-      var lines = ['"誰に","いつ"'];
-      for (var i = 0; i < logs.length; i++) {
-        lines.push(escapeCsv(logs[i].to) + ',' + escapeCsv(formatDate(logs[i].at)));
+    function renderRecords() {
+      recordList.innerHTML = '';
+      let records = [...state.records];
+      if (historyFilter.value === 'today') {
+        const today = todayKey();
+        records = records.filter(r => todayKey(r.createdAt) === today);
       }
-      var filename = 'explain_log_export_' + new Date().toISOString().slice(0, 10) + '.csv';
-      downloadText(filename, '\uFEFF' + lines.join('\n'), 'text/csv;charset=utf-8');
-    };
+      if (!records.length) {
+        recordList.innerHTML = '<div class="empty">表示できる履歴がありません。</div>';
+        return;
+      }
+      records.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'item';
 
-    renderNames();
-    renderLogs();
+        const pill = document.createElement('div');
+        pill.className = 'pill';
+        pill.textContent = '説明記録';
+
+        const title = document.createElement('div');
+        title.className = 'item-title';
+        title.textContent = `誰に: ${r.toName}`;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `いつ: ${formatDateTime(r.createdAt)}${r.note ? '<br>メモ: ' + escapeHtml(r.note) : ''}`;
+
+        const tools = document.createElement('div');
+        tools.className = 'toolbar';
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '削除';
+        delBtn.addEventListener('click', () => deleteRecord(r.id));
+
+        tools.appendChild(delBtn);
+
+        item.appendChild(pill);
+        item.appendChild(title);
+        item.appendChild(meta);
+        item.appendChild(tools);
+        recordList.appendChild(item);
+      });
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function renderAll() {
+      renderRecipientSelect();
+      renderNames();
+      renderRecords();
+    }
+
+    renderAll();
   </script>
 </body>
 </html>
