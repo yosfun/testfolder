@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>説明記録 超簡易版</title>
+  <title>説明記録 シンプル版</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -16,16 +16,16 @@
       margin: 0 auto;
       padding: 16px;
     }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 16px;
+    }
     .card {
       background: #fff;
       border-radius: 14px;
       padding: 16px;
       margin-bottom: 14px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-    h1 {
-      font-size: 24px;
-      margin: 0 0 16px;
     }
     h2 {
       font-size: 18px;
@@ -37,20 +37,16 @@
       margin: 10px 0 6px;
       font-weight: 600;
     }
-    input, select, textarea, button {
+    input, select, button {
       width: 100%;
       box-sizing: border-box;
       font-size: 16px;
       border-radius: 10px;
     }
-    input, select, textarea {
+    input, select {
       padding: 12px;
       border: 1px solid #cfcfd4;
       background: #fff;
-    }
-    textarea {
-      min-height: 84px;
-      resize: vertical;
     }
     button {
       padding: 12px;
@@ -63,32 +59,52 @@
     button.sub {
       background: #666;
     }
+    button.light {
+      background: #2d6cdf;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .row > * {
+      flex: 1 1 200px;
+    }
     ul {
       list-style: none;
       padding: 0;
       margin: 12px 0 0;
     }
     li {
-      padding: 10px 0;
+      padding: 12px 0;
       border-top: 1px solid #ececf1;
     }
     .small {
       color: #666;
       font-size: 13px;
-    }
-    .rowbtn {
-      margin-top: 8px;
+      line-height: 1.5;
     }
     .empty {
       color: #666;
       font-size: 14px;
       padding-top: 6px;
     }
+    .pill {
+      display: inline-block;
+      font-size: 12px;
+      background: #efeff4;
+      border-radius: 999px;
+      padding: 4px 8px;
+      margin-bottom: 6px;
+    }
+    .rowbtn {
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>説明記録 超簡易版</h1>
+    <h1>説明記録 シンプル版</h1>
 
     <div class="card">
       <h2>1. 名前登録</h2>
@@ -100,22 +116,19 @@
     </div>
 
     <div class="card">
-      <h2>2. 説明記録</h2>
-      <label for="fromInput">誰が説明したか</label>
-      <input id="fromInput" type="text" placeholder="例: 自分 / 田中" />
-
+      <h2>2. 記録</h2>
       <label for="toSelect">誰に説明したか</label>
       <select id="toSelect"></select>
-
-      <label for="memoInput">メモ（任意）</label>
-      <textarea id="memoInput" placeholder="説明内容など"></textarea>
-
-      <button id="saveLogBtn" type="button">説明を記録</button>
-      <div class="small" style="margin-top:8px;">押した時の日時で保存します</div>
+      <button id="saveLogBtn" type="button">この相手で記録</button>
+      <div class="small" style="margin-top:8px;">押した時の日時で保存します。記録は「誰に / いつ」だけ残します。</div>
     </div>
 
     <div class="card">
       <h2>3. 履歴</h2>
+      <div class="row">
+        <button id="exportJsonBtn" type="button" class="light">JSONを書き出し</button>
+        <button id="exportCsvBtn" type="button" class="light">CSVを書き出し</button>
+      </div>
       <button id="clearBtn" type="button" class="sub">履歴を全部消す</button>
       <ul id="logList"></ul>
       <div id="logEmpty" class="empty">まだ履歴がありません</div>
@@ -123,22 +136,20 @@
   </div>
 
   <script>
-    var STORAGE_NAMES = 'simple_explain_names_v1';
-    var STORAGE_LOGS = 'simple_explain_logs_v1';
+    var STORAGE_NAMES = 'simple_names_v2';
+    var STORAGE_LOGS = 'simple_logs_v2';
 
     var nameInput = document.getElementById('nameInput');
     var addNameBtn = document.getElementById('addNameBtn');
     var nameList = document.getElementById('nameList');
     var nameEmpty = document.getElementById('nameEmpty');
-
-    var fromInput = document.getElementById('fromInput');
     var toSelect = document.getElementById('toSelect');
-    var memoInput = document.getElementById('memoInput');
     var saveLogBtn = document.getElementById('saveLogBtn');
-
     var logList = document.getElementById('logList');
     var logEmpty = document.getElementById('logEmpty');
     var clearBtn = document.getElementById('clearBtn');
+    var exportJsonBtn = document.getElementById('exportJsonBtn');
+    var exportCsvBtn = document.getElementById('exportCsvBtn');
 
     function loadNames() {
       try {
@@ -175,6 +186,25 @@
       return y + '/' + m + '/' + day + ' ' + h + ':' + min;
     }
 
+    function escapeCsv(value) {
+      var text = String(value == null ? '' : value);
+      return '"' + text.replace(/"/g, '""') + '"';
+    }
+
+    function downloadText(filename, content, type) {
+      var blob = new Blob([content], { type: type });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function() {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }
+
     function renderNames() {
       var names = loadNames();
       nameList.innerHTML = '';
@@ -186,38 +216,50 @@
         opt.value = '';
         opt.textContent = '先に名前を追加してください';
         toSelect.appendChild(opt);
-      } else {
-        nameEmpty.style.display = 'none';
-        for (var i = 0; i < names.length; i++) {
-          (function(index) {
-            var li = document.createElement('li');
-            li.textContent = names[index] + ' ';
+        return;
+      }
 
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.textContent = '削除';
-            btn.className = 'sub rowbtn';
-            btn.onclick = function() {
-              var current = loadNames();
-              current.splice(index, 1);
-              saveNames(current);
-              renderNames();
-            };
-            li.appendChild(btn);
-            nameList.appendChild(li);
+      nameEmpty.style.display = 'none';
+      for (var i = 0; i < names.length; i++) {
+        (function(index) {
+          var li = document.createElement('li');
+          var text = document.createElement('div');
+          text.textContent = names[index];
+          li.appendChild(text);
 
-            var option = document.createElement('option');
-            option.value = names[i];
-            option.textContent = names[i];
-            toSelect.appendChild(option);
-          })(i);
-        }
+          var del = document.createElement('button');
+          del.type = 'button';
+          del.textContent = '削除';
+          del.className = 'sub rowbtn';
+          del.onclick = function() {
+            var current = loadNames();
+            var deletedName = current[index];
+            current.splice(index, 1);
+            saveNames(current);
+
+            var logs = loadLogs().filter(function(item) {
+              return item.to !== deletedName;
+            });
+            saveLogs(logs);
+
+            renderNames();
+            renderLogs();
+          };
+          li.appendChild(del);
+          nameList.appendChild(li);
+        })(i);
+
+        var option = document.createElement('option');
+        option.value = names[i];
+        option.textContent = names[i];
+        toSelect.appendChild(option);
       }
     }
 
     function renderLogs() {
       var logs = loadLogs();
       logList.innerHTML = '';
+
       if (logs.length === 0) {
         logEmpty.style.display = 'block';
         return;
@@ -228,16 +270,15 @@
         (function(index) {
           var log = logs[index];
           var li = document.createElement('li');
-          var text = document.createElement('div');
-          text.textContent = log.from + ' → ' + log.to + ' / ' + formatDate(log.at);
-          li.appendChild(text);
 
-          if (log.memo) {
-            var memo = document.createElement('div');
-            memo.className = 'small';
-            memo.textContent = 'メモ: ' + log.memo;
-            li.appendChild(memo);
-          }
+          var tag = document.createElement('div');
+          tag.className = 'pill';
+          tag.textContent = '説明記録';
+          li.appendChild(tag);
+
+          var text = document.createElement('div');
+          text.textContent = log.to + ' / ' + formatDate(log.at);
+          li.appendChild(text);
 
           var del = document.createElement('button');
           del.type = 'button';
@@ -273,14 +314,7 @@
     };
 
     saveLogBtn.onclick = function() {
-      var from = fromInput.value.trim();
       var to = toSelect.value;
-      var memo = memoInput.value.trim();
-
-      if (!from) {
-        alert('誰が説明したかを入力してください');
-        return;
-      }
       if (!to) {
         alert('説明相手を選んでください');
         return;
@@ -288,14 +322,10 @@
 
       var logs = loadLogs();
       logs.push({
-        from: from,
         to: to,
-        memo: memo,
         at: new Date().toISOString()
       });
       saveLogs(logs);
-
-      memoInput.value = '';
       renderLogs();
       alert('記録しました');
     };
@@ -304,6 +334,26 @@
       if (!confirm('履歴を全部消しますか？')) return;
       saveLogs([]);
       renderLogs();
+    };
+
+    exportJsonBtn.onclick = function() {
+      var data = {
+        exportedAt: new Date().toISOString(),
+        names: loadNames(),
+        logs: loadLogs()
+      };
+      var filename = 'explain_log_export_' + new Date().toISOString().slice(0, 10) + '.json';
+      downloadText(filename, JSON.stringify(data, null, 2), 'application/json;charset=utf-8');
+    };
+
+    exportCsvBtn.onclick = function() {
+      var logs = loadLogs();
+      var lines = ['"誰に","いつ"'];
+      for (var i = 0; i < logs.length; i++) {
+        lines.push(escapeCsv(logs[i].to) + ',' + escapeCsv(formatDate(logs[i].at)));
+      }
+      var filename = 'explain_log_export_' + new Date().toISOString().slice(0, 10) + '.csv';
+      downloadText(filename, '\uFEFF' + lines.join('\n'), 'text/csv;charset=utf-8');
     };
 
     renderNames();
