@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>説明記録 超簡易版</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: #f5f5f7;
+      color: #111;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 16px;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin: 10px 0 6px;
+      font-weight: 600;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 16px;
+      border-radius: 10px;
+    }
+    input, select, textarea {
+      padding: 12px;
+      border: 1px solid #cfcfd4;
+      background: #fff;
+    }
+    textarea {
+      min-height: 84px;
+      resize: vertical;
+    }
+    button {
+      padding: 12px;
+      border: 0;
+      background: #111;
+      color: #fff;
+      font-weight: 700;
+      margin-top: 12px;
+    }
+    button.sub {
+      background: #666;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 0;
+    }
+    li {
+      padding: 10px 0;
+      border-top: 1px solid #ececf1;
+    }
+    .small {
+      color: #666;
+      font-size: 13px;
+    }
+    .rowbtn {
+      margin-top: 8px;
+    }
+    .empty {
+      color: #666;
+      font-size: 14px;
+      padding-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>説明記録 超簡易版</h1>
+
+    <div class="card">
+      <h2>1. 名前登録</h2>
+      <label for="nameInput">名前</label>
+      <input id="nameInput" type="text" placeholder="例: 田中" />
+      <button id="addNameBtn" type="button">名前を追加</button>
+      <ul id="nameList"></ul>
+      <div id="nameEmpty" class="empty">まだ名前がありません</div>
+    </div>
+
+    <div class="card">
+      <h2>2. 説明記録</h2>
+      <label for="fromInput">誰が説明したか</label>
+      <input id="fromInput" type="text" placeholder="例: 自分 / 田中" />
+
+      <label for="toSelect">誰に説明したか</label>
+      <select id="toSelect"></select>
+
+      <label for="memoInput">メモ（任意）</label>
+      <textarea id="memoInput" placeholder="説明内容など"></textarea>
+
+      <button id="saveLogBtn" type="button">説明を記録</button>
+      <div class="small" style="margin-top:8px;">押した時の日時で保存します</div>
+    </div>
+
+    <div class="card">
+      <h2>3. 履歴</h2>
+      <button id="clearBtn" type="button" class="sub">履歴を全部消す</button>
+      <ul id="logList"></ul>
+      <div id="logEmpty" class="empty">まだ履歴がありません</div>
+    </div>
+  </div>
+
+  <script>
+    var STORAGE_NAMES = 'simple_explain_names_v1';
+    var STORAGE_LOGS = 'simple_explain_logs_v1';
+
+    var nameInput = document.getElementById('nameInput');
+    var addNameBtn = document.getElementById('addNameBtn');
+    var nameList = document.getElementById('nameList');
+    var nameEmpty = document.getElementById('nameEmpty');
+
+    var fromInput = document.getElementById('fromInput');
+    var toSelect = document.getElementById('toSelect');
+    var memoInput = document.getElementById('memoInput');
+    var saveLogBtn = document.getElementById('saveLogBtn');
+
+    var logList = document.getElementById('logList');
+    var logEmpty = document.getElementById('logEmpty');
+    var clearBtn = document.getElementById('clearBtn');
+
+    function loadNames() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_NAMES) || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveNames(names) {
+      localStorage.setItem(STORAGE_NAMES, JSON.stringify(names));
+    }
+
+    function loadLogs() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_LOGS) || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveLogs(logs) {
+      localStorage.setItem(STORAGE_LOGS, JSON.stringify(logs));
+    }
+
+    function formatDate(iso) {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      var h = String(d.getHours()).padStart(2, '0');
+      var min = String(d.getMinutes()).padStart(2, '0');
+      return y + '/' + m + '/' + day + ' ' + h + ':' + min;
+    }
+
+    function renderNames() {
+      var names = loadNames();
+      nameList.innerHTML = '';
+      toSelect.innerHTML = '';
+
+      if (names.length === 0) {
+        nameEmpty.style.display = 'block';
+        var opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '先に名前を追加してください';
+        toSelect.appendChild(opt);
+      } else {
+        nameEmpty.style.display = 'none';
+        for (var i = 0; i < names.length; i++) {
+          (function(index) {
+            var li = document.createElement('li');
+            li.textContent = names[index] + ' ';
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = '削除';
+            btn.className = 'sub rowbtn';
+            btn.onclick = function() {
+              var current = loadNames();
+              current.splice(index, 1);
+              saveNames(current);
+              renderNames();
+            };
+            li.appendChild(btn);
+            nameList.appendChild(li);
+
+            var option = document.createElement('option');
+            option.value = names[i];
+            option.textContent = names[i];
+            toSelect.appendChild(option);
+          })(i);
+        }
+      }
+    }
+
+    function renderLogs() {
+      var logs = loadLogs();
+      logList.innerHTML = '';
+      if (logs.length === 0) {
+        logEmpty.style.display = 'block';
+        return;
+      }
+      logEmpty.style.display = 'none';
+
+      for (var i = logs.length - 1; i >= 0; i--) {
+        (function(index) {
+          var log = logs[index];
+          var li = document.createElement('li');
+          var text = document.createElement('div');
+          text.textContent = log.from + ' → ' + log.to + ' / ' + formatDate(log.at);
+          li.appendChild(text);
+
+          if (log.memo) {
+            var memo = document.createElement('div');
+            memo.className = 'small';
+            memo.textContent = 'メモ: ' + log.memo;
+            li.appendChild(memo);
+          }
+
+          var del = document.createElement('button');
+          del.type = 'button';
+          del.textContent = 'この履歴を削除';
+          del.className = 'sub rowbtn';
+          del.onclick = function() {
+            var current = loadLogs();
+            current.splice(index, 1);
+            saveLogs(current);
+            renderLogs();
+          };
+          li.appendChild(del);
+          logList.appendChild(li);
+        })(i);
+      }
+    }
+
+    addNameBtn.onclick = function() {
+      var value = nameInput.value.trim();
+      if (!value) {
+        alert('名前を入力してください');
+        return;
+      }
+      var names = loadNames();
+      if (names.indexOf(value) !== -1) {
+        alert('同じ名前は登録済みです');
+        return;
+      }
+      names.push(value);
+      saveNames(names);
+      nameInput.value = '';
+      renderNames();
+    };
+
+    saveLogBtn.onclick = function() {
+      var from = fromInput.value.trim();
+      var to = toSelect.value;
+      var memo = memoInput.value.trim();
+
+      if (!from) {
+        alert('誰が説明したかを入力してください');
+        return;
+      }
+      if (!to) {
+        alert('説明相手を選んでください');
+        return;
+      }
+
+      var logs = loadLogs();
+      logs.push({
+        from: from,
+        to: to,
+        memo: memo,
+        at: new Date().toISOString()
+      });
+      saveLogs(logs);
+
+      memoInput.value = '';
+      renderLogs();
+      alert('記録しました');
+    };
+
+    clearBtn.onclick = function() {
+      if (!confirm('履歴を全部消しますか？')) return;
+      saveLogs([]);
+      renderLogs();
+    };
+
+    renderNames();
+    renderLogs();
+  </script>
+</body>
+</html>
