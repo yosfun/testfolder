@@ -13,6 +13,8 @@
       --line: #dbe2ea;
       --accent: #2563eb;
       --danger: #dc2626;
+      --warn: #92400e;
+      --warnbg: #fff7ed;
     }
     * { box-sizing: border-box; }
     body {
@@ -27,10 +29,7 @@
       padding: 16px;
       padding-bottom: 40px;
     }
-    h1 {
-      font-size: 24px;
-      margin: 8px 0 16px;
-    }
+    h1 { font-size: 24px; margin: 8px 0 16px; }
     .tabs {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -61,15 +60,22 @@
       margin-bottom: 14px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
-    .card h2 {
-      font-size: 18px;
-      margin: 0 0 12px;
-    }
+    .card h2 { font-size: 18px; margin: 0 0 12px; }
     .sub {
       font-size: 13px;
       color: var(--muted);
       margin-bottom: 10px;
       line-height: 1.5;
+    }
+    .notice {
+      background: var(--warnbg);
+      color: var(--warn);
+      border: 1px solid #fed7aa;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 10px;
     }
     label {
       display: block;
@@ -151,6 +157,22 @@
       color: #3730a3;
       margin-bottom: 8px;
     }
+    .confirm-box {
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .confirm-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .confirm-text {
+      font-size: 14px;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -167,6 +189,7 @@
       <div class="card">
         <h2>説明を記録</h2>
         <div class="sub">「誰に説明したか」と「いつ」を記録します。説明者は不要です。</div>
+        <div class="notice">誤記録防止のため、記録ボタンを押した後に確認欄が出ます。確認欄でもう一度押した時だけ保存します。</div>
 
         <label for="recipientSelect">相手</label>
         <select id="recipientSelect"></select>
@@ -175,8 +198,10 @@
         <textarea id="noteInput" placeholder="必要なら内容を入力"></textarea>
 
         <div class="toolbar">
-          <button class="primary" id="saveRecordBtn">この相手で記録</button>
+          <button class="primary" id="prepareRecordBtn">記録内容を確認する</button>
         </div>
+
+        <div id="recordConfirmArea"></div>
         <div id="recordMessage"></div>
       </div>
 
@@ -208,6 +233,7 @@
 
       <div class="card">
         <h2>登録済みの名前</h2>
+        <div class="notice">名前削除は関連履歴も一緒に消えます。削除時は確認表示が出ます。</div>
         <div class="list" id="nameList"></div>
       </div>
     </section>
@@ -224,6 +250,7 @@
       <div class="card">
         <h2>JSONインポート</h2>
         <div class="sub">このアプリから書き出したJSONを読み込みます。今のデータは上書きされます。</div>
+        <div class="notice">誤操作防止のため、読み込み前に件数の確認を出します。</div>
         <label for="importFile">JSONファイル</label>
         <input id="importFile" type="file" accept=".json,application/json" />
         <div class="toolbar">
@@ -235,6 +262,7 @@
       <div class="card">
         <h2>全データ削除</h2>
         <div class="sub">名前と履歴をすべて削除します。</div>
+        <div class="notice">削除時は確認のため、指定文字を入力してから削除します。</div>
         <div class="toolbar">
           <button class="danger" id="clearAllBtn">全データ削除</button>
         </div>
@@ -243,13 +271,13 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'explain_log_json_only_v2';
-
+    const STORAGE_KEY = 'explain_log_json_only_v3_strong_confirm';
     const state = loadState();
 
     const recipientSelect = document.getElementById('recipientSelect');
     const noteInput = document.getElementById('noteInput');
-    const saveRecordBtn = document.getElementById('saveRecordBtn');
+    const prepareRecordBtn = document.getElementById('prepareRecordBtn');
+    const recordConfirmArea = document.getElementById('recordConfirmArea');
     const recordList = document.getElementById('recordList');
     const historyFilter = document.getElementById('historyFilter');
     const recordMessage = document.getElementById('recordMessage');
@@ -265,6 +293,8 @@
     const dataMessage = document.getElementById('dataMessage');
     const clearAllBtn = document.getElementById('clearAllBtn');
 
+    let pendingRecord = null;
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
@@ -275,7 +305,7 @@
     });
 
     addNameBtn.addEventListener('click', addName);
-    saveRecordBtn.addEventListener('click', saveRecord);
+    prepareRecordBtn.addEventListener('click', prepareRecord);
     historyFilter.addEventListener('change', renderRecords);
     exportJsonBtn.addEventListener('click', exportJson);
     importJsonBtn.addEventListener('click', importJson);
@@ -370,6 +400,9 @@
         return;
       }
       target.name = trimmed;
+      state.records.forEach(r => {
+        if (r.toId === id) r.toName = trimmed;
+      });
       saveState();
       renderAll();
     }
@@ -377,7 +410,11 @@
     function deleteName(id) {
       const target = state.names.find(n => n.id === id);
       if (!target) return;
-      const ok = confirm(`「${target.name}」を削除しますか？\n関連する履歴も削除されます。`);
+      const relatedCount = state.records.filter(r => r.toId === id).length;
+      const text = relatedCount
+        ? `「${target.name}」を削除しますか？\n関連履歴 ${relatedCount} 件も一緒に削除されます。`
+        : `「${target.name}」を削除しますか？`;
+      const ok = confirm(text);
       if (!ok) return;
       state.names = state.names.filter(n => n.id !== id);
       state.records = state.records.filter(r => r.toId !== id);
@@ -385,7 +422,7 @@
       renderAll();
     }
 
-    function saveRecord() {
+    function prepareRecord() {
       if (!state.names.length) {
         showMessage(recordMessage, '先に名前を登録してください。', 'error');
         return;
@@ -396,22 +433,80 @@
         showMessage(recordMessage, '相手を選んでください。', 'error');
         return;
       }
-      const note = noteInput.value.trim();
-      state.records.unshift({
-        id: makeId(),
+      pendingRecord = {
         toId,
         toName: target.name,
-        note,
+        note: noteInput.value.trim(),
         createdAt: nowIso()
+      };
+      renderRecordConfirm();
+      showMessage(recordMessage, '', 'success');
+    }
+
+    function renderRecordConfirm() {
+      recordConfirmArea.innerHTML = '';
+      if (!pendingRecord) return;
+
+      const box = document.createElement('div');
+      box.className = 'confirm-box';
+
+      const title = document.createElement('div');
+      title.className = 'confirm-title';
+      title.textContent = 'この内容で記録しますか？';
+
+      const text = document.createElement('div');
+      text.className = 'confirm-text';
+      text.innerHTML = `誰に: ${escapeHtml(pendingRecord.toName)}<br>いつ: ${formatDateTime(pendingRecord.createdAt)}${pendingRecord.note ? '<br>メモ: ' + escapeHtml(pendingRecord.note) : ''}`;
+
+      const tools = document.createElement('div');
+      tools.className = 'toolbar';
+
+      const okBtn = document.createElement('button');
+      okBtn.className = 'primary';
+      okBtn.textContent = 'この内容で保存';
+      okBtn.addEventListener('click', commitRecord);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'muted-btn';
+      cancelBtn.textContent = 'キャンセル';
+      cancelBtn.addEventListener('click', () => {
+        pendingRecord = null;
+        renderRecordConfirm();
+      });
+
+      tools.appendChild(okBtn);
+      tools.appendChild(cancelBtn);
+
+      box.appendChild(title);
+      box.appendChild(text);
+      box.appendChild(tools);
+
+      recordConfirmArea.appendChild(box);
+    }
+
+    function commitRecord() {
+      if (!pendingRecord) return;
+      state.records.unshift({
+        id: makeId(),
+        toId: pendingRecord.toId,
+        toName: pendingRecord.toName,
+        note: pendingRecord.note,
+        createdAt: pendingRecord.createdAt
       });
       saveState();
       noteInput.value = '';
-      showMessage(recordMessage, `「${target.name}」への記録を保存しました。`, 'success');
+      pendingRecord = null;
+      renderRecordConfirm();
+      showMessage(recordMessage, '記録を保存しました。', 'success');
       renderRecords();
     }
 
     function deleteRecord(id) {
-      const ok = confirm('この履歴を削除しますか？');
+      const target = state.records.find(r => r.id === id);
+      const text = target
+        ? `この履歴を削除しますか？\n誰に: ${target.toName}\nいつ: ${formatDateTime(target.createdAt)}`
+        : 'この履歴を削除しますか？';
+      const ok = confirm(text);
       if (!ok) return;
       state.records = state.records.filter(r => r.id !== id);
       saveState();
@@ -421,7 +516,7 @@
     function exportJson() {
       const payload = {
         app: '説明記録アプリ',
-        version: 2,
+        version: 3,
         exportedAt: nowIso(),
         data: state
       };
@@ -451,12 +546,12 @@
             throw new Error('invalid');
           }
 
-          state.names = data.names.map(n => ({
+          const nextNames = data.names.map(n => ({
             id: String(n.id || makeId()),
             name: String(n.name || '').trim()
           })).filter(n => n.name);
 
-          state.records = data.records.map(r => ({
+          const nextRecords = data.records.map(r => ({
             id: String(r.id || makeId()),
             toId: String(r.toId || ''),
             toName: String(r.toName || ''),
@@ -464,6 +559,16 @@
             createdAt: String(r.createdAt || nowIso())
           })).filter(r => r.toName && r.createdAt);
 
+          const ok = confirm(
+            `JSONを読み込みますか？\n` +
+            `名前: ${nextNames.length} 件\n` +
+            `履歴: ${nextRecords.length} 件\n\n` +
+            `今のデータは上書きされます。`
+          );
+          if (!ok) return;
+
+          state.names = nextNames;
+          state.records = nextRecords;
           saveState();
           importFile.value = '';
           showMessage(dataMessage, 'JSONを読み込みました。', 'success');
@@ -476,10 +581,15 @@
     }
 
     function clearAllData() {
-      const ok = confirm('名前と履歴をすべて削除しますか？');
-      if (!ok) return;
+      const typed = prompt('全データを削除するには「削除」と入力してください。');
+      if (typed === null) return;
+      if (typed.trim() !== '削除') {
+        showMessage(dataMessage, '指定文字が一致しないため、中止しました。', 'error');
+        return;
+      }
       state.names = [];
       state.records = [];
+      pendingRecord = null;
       saveState();
       showMessage(dataMessage, '全データを削除しました。', 'success');
       renderAll();
@@ -493,11 +603,11 @@
         op.textContent = '先に名前を登録してください';
         recipientSelect.appendChild(op);
         recipientSelect.disabled = true;
-        saveRecordBtn.disabled = true;
+        prepareRecordBtn.disabled = true;
         return;
       }
       recipientSelect.disabled = false;
-      saveRecordBtn.disabled = false;
+      prepareRecordBtn.disabled = false;
       state.names.forEach(n => {
         const op = document.createElement('option');
         op.value = n.id;
@@ -513,12 +623,18 @@
         return;
       }
       state.names.forEach(n => {
+        const relatedCount = state.records.filter(r => r.toId === n.id).length;
+
         const item = document.createElement('div');
         item.className = 'item';
 
         const title = document.createElement('div');
         title.className = 'item-title';
         title.textContent = n.name;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = `関連履歴: ${relatedCount} 件`;
 
         const tools = document.createElement('div');
         tools.className = 'toolbar';
@@ -537,6 +653,7 @@
         tools.appendChild(delBtn);
 
         item.appendChild(title);
+        item.appendChild(meta);
         item.appendChild(tools);
         nameList.appendChild(item);
       });
@@ -588,7 +705,7 @@
     }
 
     function escapeHtml(str) {
-      return str
+      return String(str)
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
@@ -600,6 +717,7 @@
       renderRecipientSelect();
       renderNames();
       renderRecords();
+      renderRecordConfirm();
     }
 
     renderAll();
