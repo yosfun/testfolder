@@ -15,6 +15,10 @@
       --danger: #dc2626;
       --warn: #92400e;
       --warnbg: #fff7ed;
+      --okbg: #ecfdf5;
+      --oktext: #065f46;
+      --ngbg: #f8fafc;
+      --ngtext: #475569;
     }
     * { box-sizing: border-box; }
     body {
@@ -24,7 +28,7 @@
       color: var(--text);
     }
     .wrap {
-      max-width: 760px;
+      max-width: 820px;
       margin: 0 auto;
       padding: 16px;
       padding-bottom: 40px;
@@ -32,7 +36,7 @@
     h1 { font-size: 24px; margin: 8px 0 16px; }
     .tabs {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
       gap: 8px;
       margin-bottom: 14px;
     }
@@ -40,9 +44,9 @@
       border: 1px solid var(--line);
       background: #fff;
       border-radius: 12px;
-      padding: 12px 10px;
-      font-size: 15px;
-      font-weight: 600;
+      padding: 12px 8px;
+      font-size: 14px;
+      font-weight: 700;
       color: var(--text);
     }
     .tab-btn.active {
@@ -173,6 +177,50 @@
       font-size: 14px;
       line-height: 1.6;
     }
+    .status-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .status-table th, .status-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 10px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    .status-table th {
+      background: #f8fafc;
+      font-size: 13px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .status-ok {
+      background: var(--okbg);
+      color: var(--oktext);
+    }
+    .status-ng {
+      background: var(--ngbg);
+      color: var(--ngtext);
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    @media (max-width: 640px) {
+      .tabs { grid-template-columns: 1fr 1fr; }
+      .status-table th, .status-table td { padding: 10px 8px; }
+    }
   </style>
 </head>
 <body>
@@ -180,12 +228,31 @@
     <h1>説明記録アプリ</h1>
 
     <div class="tabs">
-      <button class="tab-btn active" data-tab="record">記録</button>
+      <button class="tab-btn active" data-tab="status">状況一覧</button>
+      <button class="tab-btn" data-tab="record">記録</button>
       <button class="tab-btn" data-tab="names">名前管理</button>
       <button class="tab-btn" data-tab="data">データ管理</button>
     </div>
 
-    <section class="panel active" id="panel-record">
+    <section class="panel active" id="panel-status">
+      <div class="card">
+        <h2>確認状況一覧</h2>
+        <div class="sub">各名前ごとの最新状況を一覧表示します。履歴がなければ「未確認」、履歴があれば最新の確認日時を表示します。</div>
+        <div class="row">
+          <div>
+            <label for="statusFilter">表示</label>
+            <select id="statusFilter">
+              <option value="all">全員</option>
+              <option value="unchecked">未確認のみ</option>
+              <option value="checked">確認ありのみ</option>
+            </select>
+          </div>
+        </div>
+        <div id="statusArea"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-record">
       <div class="card">
         <h2>説明を記録</h2>
         <div class="sub">「誰に説明したか」と「いつ」を記録します。説明者は不要です。</div>
@@ -224,7 +291,7 @@
       <div class="card">
         <h2>名前を追加</h2>
         <label for="nameInput">名前</label>
-        <input id="nameInput" type="text" placeholder="例: 田中" />
+        <input id="nameInput" type="text" placeholder="例: Aさん" />
         <div class="toolbar">
           <button class="primary" id="addNameBtn">追加</button>
         </div>
@@ -271,8 +338,11 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'explain_log_json_only_v3_strong_confirm';
+    const STORAGE_KEY = 'explain_log_with_status_v1';
     const state = loadState();
+
+    const statusFilter = document.getElementById('statusFilter');
+    const statusArea = document.getElementById('statusArea');
 
     const recipientSelect = document.getElementById('recipientSelect');
     const noteInput = document.getElementById('noteInput');
@@ -304,6 +374,7 @@
       });
     });
 
+    statusFilter.addEventListener('change', renderStatus);
     addNameBtn.addEventListener('click', addName);
     prepareRecordBtn.addEventListener('click', prepareRecord);
     historyFilter.addEventListener('change', renderRecords);
@@ -353,8 +424,7 @@
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        minute: '2-digit'
       });
     }
 
@@ -499,6 +569,7 @@
       renderRecordConfirm();
       showMessage(recordMessage, '記録を保存しました。', 'success');
       renderRecords();
+      renderStatus();
     }
 
     function deleteRecord(id) {
@@ -511,12 +582,13 @@
       state.records = state.records.filter(r => r.id !== id);
       saveState();
       renderRecords();
+      renderStatus();
     }
 
     function exportJson() {
       const payload = {
         app: '説明記録アプリ',
-        version: 3,
+        version: 4,
         exportedAt: nowIso(),
         data: state
       };
@@ -614,6 +686,83 @@
         op.textContent = n.name;
         recipientSelect.appendChild(op);
       });
+    }
+
+    function latestRecordMap() {
+      const map = {};
+      state.records.forEach(r => {
+        const current = map[r.toId];
+        if (!current || new Date(r.createdAt).getTime() > new Date(current.createdAt).getTime()) {
+          map[r.toId] = r;
+        }
+      });
+      return map;
+    }
+
+    function renderStatus() {
+      statusArea.innerHTML = '';
+      if (!state.names.length) {
+        statusArea.innerHTML = '<div class="empty">まだ名前がありません。</div>';
+        return;
+      }
+
+      const latestMap = latestRecordMap();
+      let rows = state.names.map(n => {
+        const latest = latestMap[n.id] || null;
+        return { name: n, latest };
+      });
+
+      if (statusFilter.value === 'unchecked') {
+        rows = rows.filter(r => !r.latest);
+      } else if (statusFilter.value === 'checked') {
+        rows = rows.filter(r => !!r.latest);
+      }
+
+      if (!rows.length) {
+        statusArea.innerHTML = '<div class="empty">該当する名前がありません。</div>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.className = 'status-table';
+
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th style="width:36%">名前</th><th>確認状況</th></tr>';
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+
+        const tdName = document.createElement('td');
+        tdName.textContent = row.name.name;
+
+        const tdStatus = document.createElement('td');
+        if (!row.latest) {
+          tdStatus.innerHTML = '<span class="status-badge status-ng">未確認</span><div class="small">まだ記録がありません。</div>';
+        } else {
+          const badge = document.createElement('span');
+          badge.className = 'status-badge status-ok';
+          badge.textContent = formatDateTime(row.latest.createdAt) + ' に確認';
+
+          const small = document.createElement('div');
+          small.className = 'small';
+          small.innerHTML = row.latest.note
+            ? '最新メモ: ' + escapeHtml(row.latest.note)
+            : '最新の記録が保存されています。';
+
+          tdStatus.appendChild(badge);
+          tdStatus.appendChild(small);
+        }
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdStatus);
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      statusArea.appendChild(table);
     }
 
     function renderNames() {
@@ -715,6 +864,7 @@
 
     function renderAll() {
       renderRecipientSelect();
+      renderStatus();
       renderNames();
       renderRecords();
       renderRecordConfirm();
